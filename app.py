@@ -1,14 +1,13 @@
 
 from flask import Flask, request, jsonify, render_template, session
-from transformers import pipeline
-
-# from dotenv import load_dotenv
+# from transformers import pipeline
 import os
 import openai
 import spacy
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-# Load spaCy model
-nlp = spacy.load("en_core_web_md")  # Use medium-sized model for better word embeddings
+# # Load spaCy model
+nlp = spacy.load("en_core_web_sm")  # Use medium-sized model for better word embeddings
 
 
 # load_dotenv()  # take environment variables from .env file
@@ -19,8 +18,11 @@ app = Flask(__name__)
 app.secret_key = 'super_secret_key'
 
 
-sentiment_analysis = pipeline('sentiment-analysis')
-ner_pipeline = pipeline('ner', aggregation_strategy="simple")  # Named Entity Recognition
+# sentiment_analysis = pipeline('sentiment-analysis')
+# ner_pipeline = pipeline('ner', aggregation_strategy="simple")  # Named Entity Recognition
+
+# Initialize VADER sentiment analyzer
+vader_analyzer = SentimentIntensityAnalyzer()
 
 
 app.static_folder = 'static'
@@ -94,8 +96,15 @@ def analyze_mood():
 
     # Analyze sentiment of each user message
     for user_message in user_messages:
-        sentiment = sentiment_analysis(user_message)[0]
-        mood = sentiment['label']  # Returns 'POSITIVE', 'NEGATIVE', or sometimes 'NEUTRAL'
+        # sentiment = sentiment_analysis(user_message)[0]
+        sentiment_scores = vader_analyzer.polarity_scores(user_message)
+        mood = "NEUTRAL"  # Default mood
+
+        # Determine the mood based on VADER scores
+        if sentiment_scores['compound'] >= 0.05:
+            mood = "POSITIVE"
+        elif sentiment_scores['compound'] <= -0.05:
+            mood = "NEGATIVE"
 
         # Increment the corresponding mood counter
         if mood in mood_counts:
